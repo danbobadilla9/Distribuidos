@@ -20,7 +20,15 @@ public class Coordenada {
 
     public double ordenada( ) { return y; }
 
-    
+    public void region(){
+        if(x < 0 && y <0){
+            System.out.println("Cuadrante 3");
+        }else if(x > 0 && y > 0){
+            System.out.println("Cuadrante 1");
+        }else if(x > 0 && y < 0){
+            System.out.println("Cuadrante 4");
+        }
+    }
 
     //Sobreescritura del método de la superclase objeto para imprimir con System.out.println( )
 
