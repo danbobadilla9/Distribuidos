@@ -30,6 +30,10 @@ public class Coordenada {
         }
     }
 
+    public void radio(){
+        System.out.println("El cuadrado es -> "+(x*x)+(y*y));
+    }
+
     //Sobreescritura del método de la superclase objeto para imprimir con System.out.println( )
 
     @Override
