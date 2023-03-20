@@ -1,0 +1,5 @@
+sudo apt-get update
+
+apt-cache search java
+
+sudo apt-get install openjdk-17-jre-headless

@@ -1,0 +1,170 @@
+import com.sun.net.httpserver.Headers;
+import com.sun.net.httpserver.HttpContext;
+import com.sun.net.httpserver.HttpExchange;
+import com.sun.net.httpserver.HttpServer;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Calendar;
+import java.util.List;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.math.BigInteger;
+import java.net.InetSocketAddress;
+import java.util.Arrays;
+import java.util.concurrent.Executors;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import classAux.SerializationUtils;
+public class WebServer {
+
+    private static final String WORKER_ADDRESS_1 = "http://localhost:8081/task";
+    private static final String WORKER_ADDRESS_2 = "http://localhost:8082/task";
+    // private static final String WORKER_ADDRESS_3 = "http://localhost:8083/task";
+    // private static final String WORKER_ADDRESS_4 = "http://localhost:8084/task";
+
+    private static final String TASK_ENDPOINT = "/task";
+    private static final String START_ENDPOINT = "/start";
+    private final int port;
+    private HttpServer server;
+
+    public static void main(String[] args) {
+        int serverPort = 8080;
+        if (args.length == 1) {
+            serverPort = Integer.parseInt(args[0]);
+        }
+
+        WebServer webServer = new WebServer(serverPort);
+        webServer.startServer();
+
+        System.out.println("Servidor escuchando en el puerto " + serverPort);
+    }
+
+    public WebServer(int port) {
+        this.port = port;
+    }
+
+    public void startServer() {
+        try {
+            this.server = HttpServer.create(new InetSocketAddress(port), 0);
+        } catch (IOException e) {
+            e.printStackTrace();
+            return;
+        
+        }
+        HttpContext taskContext = server.createContext(TASK_ENDPOINT);
+        HttpContext startContext = server.createContext(START_ENDPOINT);
+
+        taskContext.setHandler(this::handleTaskRequest);
+        startContext.setHandler(this::handleStartRequest);
+
+        server.setExecutor(Executors.newFixedThreadPool(8));
+        server.start();
+    }
+
+    private void handleTaskRequest(HttpExchange exchange) throws IOException {
+        if (!exchange.getRequestMethod().equalsIgnoreCase("post")) {
+            exchange.close();
+            return;
+        }
+        Headers headers = exchange.getRequestHeaders();
+        byte[] requestBytes = exchange.getRequestBody().readAllBytes();
+        byte[] responseBytes = sendServidorProcesamiento(requestBytes);
+        sendResponse(responseBytes, exchange);
+    }
+//----------------------------Iniciando servidor
+    private void handleStartRequest(HttpExchange exchange) throws IOException {
+        if (!exchange.getRequestMethod().equalsIgnoreCase("get")) {
+            exchange.close();
+            return;
+        }
+        System.out.println("Iniciando EL procesamiento \n");
+        String responseMessage = "El servidor está vivo\n";
+        sendResponse(responseMessage.getBytes(), exchange);
+        Headers headers = exchange.getRequestHeaders();
+        sendServidorProcesamiento();
+    }
+//--------------------------------------------------
+    private byte[] sendServidorProcesamiento(byte[] requestBytes) {
+        int cantidades = 0;
+        int total = 0;
+        String workerAddress ="";
+        int auxMv = 0;
+        //Enviar solicitud
+        try {
+            Thread.sleep(2000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
+        LocalDateTime date = LocalDateTime.now();
+        int seconds = date.toLocalTime().toSecondOfDay();
+        String timeStamp = Integer.toString(seconds);
+        //Deserializando para imprimir los datos recibidos
+        System.out.println("Datos recibidos y añadiendo el tiempo del servidor: \n");
+        ArrayList<Object> data = new ArrayList<Object>();
+        data = (ArrayList<Object>)SerializationUtils.deserialize(requestBytes);
+        for(int i = 0; i < data.size();i++){
+            String datos = (String)data.get(i);
+            String[] info = datos.split("-");
+            if(info[1].equals("C")&&info[2].equals("A")){
+                workerAddress = info[0];
+                data.remove(i);
+                data.add(auxMv, workerAddress+"-T-A-"+timeStamp);
+                break;
+            }
+            if(info[1].equals("T")&&info[2].equals("A")&&!info[3].equals(" ")){
+                total+= Integer.parseInt(info[3]);
+                cantidades++;
+                System.out.println("Servidor -> "+info[0]+" Tiempo en segundos -> "+info[3]);
+            }
+            if(info[1].equals("T")&&info[2].equals("A")&&info[3].equals(" ")){
+                workerAddress = info[0];
+                data.remove(i);
+                auxMv = i;
+                data.add(auxMv, workerAddress+"-T-A-"+timeStamp);
+                break;
+            }
+        }
+        System.out.println("Tiempo Promedio -> "+total/cantidades);
+        //Enviamos los datos al siguiente servidor
+        Application.play(data);
+        //----------------------------------------------------------------------------------------
+        return String.format("El resultado de la multiplicación es %s\n", 10).getBytes();
+    }
+
+    //-------------Iniciando el servidor
+    private void sendServidorProcesamiento() {
+        //Enviar solicitud
+        try {
+            Thread.sleep(2000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        LocalDateTime date = LocalDateTime.now();
+        int seconds = date.toLocalTime().toSecondOfDay();
+        String timeStamp = Integer.toString(seconds);
+        //---------------------------------------------------------------------------------------
+        ArrayList<Object> data = new ArrayList<Object>();
+        //Lectura Pagina web "-" Enviando T/ No ah enviando nada F "-" Alive A / Dead D "-" hora en segundos 
+        data.add(WORKER_ADDRESS_1+"-T-A-"+timeStamp);
+        data.add(WORKER_ADDRESS_2+"-F-A-");
+        // data.add(WORKER_ADDRESS_3+"-F-A-");
+        // data.add(WORKER_ADDRESS_4+"-F-A-");
+        //----------------------------------------------------------------------------------------
+        //Enviamos los datos al siguiente servidor
+        Application.play(data);
+        //----------------------------------------------------------------------------------------
+    }
+
+    private void sendResponse(byte[] responseBytes, HttpExchange exange) throws IOException {
+        exange.sendResponseHeaders(200, responseBytes.length);
+        OutputStream outputStream = exange.getResponseBody();
+        outputStream.write(responseBytes);
+        outputStream.flush();
+        outputStream.close();
+        exange.close();
+    }
+}
