@@ -1,0 +1,6 @@
+networking/WebClient.class
+networking/WebServer.class
+networking/Aggregator.class
+model/frontend/FrontendSearchRequest.class
+Application.class
+model/frontend/FrontendSearchResponse.class
